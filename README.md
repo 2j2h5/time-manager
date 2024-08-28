@@ -3,3 +3,6 @@ A command-line program to track and manage how you spend your time running the m
 
 # Author
 2j2h5 | https://github.com/2j2h5
+
+# How to run?
+Just run main.py!
