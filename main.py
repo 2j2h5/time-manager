@@ -1,6 +1,7 @@
 import os
-import sys
 import math
+import time
+from datetime import datetime
 import sqlite3
 
 def print_screen(lines):
@@ -66,9 +67,65 @@ def show_work_list():
 def go_working():
     show_work_list()
 
-    selected = input("CHOOSE WORK:")
+    try:
+        selected = int(input('CHOOSE WORK:'))-1
+    except ValueError:
+        return 'Invalid input(not number). No changes were made.'
+    
+    conn = sqlite3.connect('work.db')
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT id, title, description FROM work')
+    rows = cursor.fetchall()
 
-    return selected
+    if selected == -1:
+        return 'back'
+
+    if 0 <= selected < len(rows):
+        selected_title = rows[selected][1]
+    else:
+        return 'Invalid input. Not on working.'
+    
+    start_time = datetime.now()
+
+    lines = [
+        f'Working "{selected_title}"',
+        'Press enter to quit'
+    ]
+    print_screen(lines)
+
+    input()
+
+    end_time = datetime.now()
+    elapsed_time = (end_time - start_time).total_seconds() / 60
+    current_date = datetime.now().strftime('%Y-%m-%d')
+
+    conn_monitor = sqlite3.connect('monitor.db')
+    cursor_monitor = conn_monitor.cursor()
+
+    cursor_monitor.execute('''
+    CREATE TABLE IF NOT EXISTS work_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        work_title TEXT NOT NULL,
+        date TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        elapsed_time REAL NOT NULL
+    )
+    ''')
+
+    cursor_monitor.execute('''
+    INSERT INTO work_log (work_title, date, start_time, end_time, elapsed_time)
+    VALUES (?, ?, ?, ?, ?)
+    ''', (selected_title, current_date, start_time.strftime('%Y-%m-%d %H:%M:%S'), end_time.strftime('%Y-%m-%d %H:%M:%S'), elapsed_time))
+
+    conn_monitor.commit()
+    cursor_monitor.close()
+    conn_monitor.close()
+    cursor.close()
+    conn.close()
+
+    return 'Work completed and logged successfully!'
 
 def monitor():
     return None
@@ -213,8 +270,11 @@ if __name__ == '__main__':
     selected = home()
     while(True):
         if selected == '1':
-            go_working()
-            break
+            result = go_working()
+            if result == 'back':
+                selected = home()
+            else:
+                selected = home(message=result)
         elif selected == '2':
             monitor()
             break
@@ -228,13 +288,13 @@ if __name__ == '__main__':
                 elif selected == '2':
                     result = modify_work()
                     if result == 'back':
-                        selected = work_manager(message=result)
+                        selected = work_manager()
                     else:
                         break
                 elif selected == '3':
                     result = delete_work()
                     if result == 'back':
-                        selected = work_manager(message=result)
+                        selected = work_manager()
                     else:
                         break
                 elif selected == '0':
