@@ -1,10 +1,28 @@
 import os
 import math
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import asyncio
 import aioconsole
+import random
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+FULL_BLOCK = '\u2588'
+EMPTY_BLOCK = '\u2591'
+
+COLORS = [
+    '\033[91m',
+    '\033[92m',
+    '\033[93m',
+    '\033[94m',
+    '\033[95m',
+    '\033[96m',
+    '\033[97m',
+]
+RESET_COLOR = '\033[0m'
 
 def print_screen(lines):
     lengths = [len(line) for line in lines]
@@ -146,8 +164,72 @@ async def go_working():
 
     return 'Work completed and logged successfully!'
 
+def get_random_color():
+    return random.choice(COLORS)
+
 def monitor():
-    return None
+    conn = sqlite3.connect('monitor.db')
+    cursor = conn.cursor()
+
+    today = datetime.now().date()
+    seven_days_ago = today - timedelta(days=6)
+
+    cursor.execute('''
+    SELECT work_title, start_time, elapsed_time 
+    FROM work_log 
+    WHERE date >= ?
+    ORDER BY start_time DESC
+    ''', (seven_days_ago,))
+
+    rows = cursor.fetchall()
+
+    lines = []
+    work_colors = {}
+    for row in rows:
+        work_title = row[0]
+        if work_title not in work_colors:
+            work_colors[work_title] = get_random_color()
+
+    grid = [["" for _ in range(48)] for _ in range(7)]
+
+    for row in rows:
+        work_title = row[0]
+        start_time = datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
+        elapsed_time = row[2]
+
+        date_index = 6 - (start_time.date() - seven_days_ago).days
+        if date_index < 0 or date_index >= 7:
+            continue
+
+        start_half_hour = (start_time.hour * 2) + (start_time.minute // 30)
+        blocks = int(elapsed_time // 15)
+
+        for i in range(blocks):
+            if start_half_hour + i < 48:
+                grid[date_index][start_half_hour + i] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
+
+    lines.append("WORK TIME DISTRIBUTION")
+
+    for work_title, color in work_colors.items():
+        lines.append(f"{color}{FULL_BLOCK}{RESET_COLOR}: {work_title}")
+
+    #lines.append('\n   ' + ' '.join([f"{i//2:02d}:{(i%2)*30:02d}" for i in range(48)]))
+
+    for i in range(7):
+        date_str = (seven_days_ago + timedelta(days=6 - i)).strftime('%Y-%m-%d')
+        row = f"{date_str} "
+        for j in range(48):
+            block = grid[i][j] if grid[i][j] else EMPTY_BLOCK
+            row += block
+        lines.append(row)
+
+    print_screen(lines)
+    input()
+    
+    cursor.close()
+    conn.close()
+
+    return
 
 def work_manager(message=None):
     lines = [
