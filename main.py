@@ -3,6 +3,8 @@ import math
 import time
 from datetime import datetime
 import sqlite3
+import asyncio
+import aioconsole
 
 def print_screen(lines):
     lengths = [len(line) for line in lines]
@@ -64,7 +66,7 @@ def show_work_list():
 
     return
 
-def go_working():
+async def go_working():
     show_work_list()
 
     try:
@@ -88,13 +90,30 @@ def go_working():
     
     start_time = datetime.now()
 
-    lines = [
-        f'Working "{selected_title}"',
-        'Press enter to quit'
-    ]
-    print_screen(lines)
+    async def update_time():
+        while True:
+            current_time = datetime.now()
+            elapsed_time = current_time - start_time
+            elapsed_str = str(elapsed_time).split('.')[0]
 
-    input()
+            lines = [
+                f'Working "{selected_title}"',
+                elapsed_str,
+                'Press enter to quit'
+            ]
+            print_screen(lines)
+
+            await asyncio.sleep(1)
+
+    async def wait_for_input():
+        await aioconsole.ainput()
+    
+    task_update_time = asyncio.create_task(update_time())
+    task_input = asyncio.create_task(wait_for_input())
+
+    await task_input
+
+    task_update_time.cancel()
 
     end_time = datetime.now()
     elapsed_time = (end_time - start_time).total_seconds() / 60
@@ -268,9 +287,9 @@ def delete_work():
 
 if __name__ == '__main__':
     selected = home()
-    while(True):
+    while True:
         if selected == '1':
-            result = go_working()
+            result = asyncio.run(go_working())
             if result == 'back':
                 selected = home()
             else:
@@ -281,7 +300,7 @@ if __name__ == '__main__':
         elif selected == '3':
             selected = work_manager()
             result = None
-            while(True):
+            while True:
                 if selected == '1':
                     result = add_work()
                     break
@@ -303,6 +322,8 @@ if __name__ == '__main__':
                     selected = work_manager(message='Invalid input.')
             selected = home(message=result)
         elif selected == '0':
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print("Time manager quit successfully! Goodbye.")
             break
         else:
             selected = home(message='Invalid input')
