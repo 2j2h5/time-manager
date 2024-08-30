@@ -24,8 +24,11 @@ COLORS = [
 ]
 RESET_COLOR = '\033[0m'
 
+def get_visible_length(text):
+    return len(text.replace('\033[91m', '').replace('\033[92m', '').replace('\033[93m', '').replace('\033[94m', '').replace('\033[95m', '').replace('\033[96m', '').replace('\033[97m', '').replace(RESET_COLOR, ''))
+
 def print_screen(lines):
-    lengths = [len(line) for line in lines]
+    lengths = [get_visible_length(line) for line in lines]
     max_length = max(lengths) + 4
     top_border = '┌' + '─' * max_length + '┐'
     bottom_border = '└' + '─' * max_length + '┘'
