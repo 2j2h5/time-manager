@@ -120,6 +120,7 @@ async def go_working():
             lines = [
                 f'Working "{selected_title}"',
                 elapsed_str,
+                '',
                 'Press enter to quit'
             ]
             print_screen(lines)
@@ -170,38 +171,41 @@ async def go_working():
 def get_random_color():
     return random.choice(COLORS)
 
-def monitor():
+def monitor(total_days=7):
     conn = sqlite3.connect('monitor.db')
     cursor = conn.cursor()
 
     today = datetime.now().date()
-    seven_days_ago = today - timedelta(days=6)
+    days_offset = 0
+
+    lines = ['WORK TIME DISTRIBUTION']
+    work_colors = {}
+
+    start_date = today - timedelta(days=total_days - 1 + days_offset)
+    end_date = today - timedelta(days=days_offset)
 
     cursor.execute('''
     SELECT work_title, start_time, elapsed_time 
     FROM work_log 
-    WHERE date >= ?
+    WHERE date BETWEEN ? AND ?
     ORDER BY start_time DESC
-    ''', (seven_days_ago,))
+    ''', (start_date, end_date))
 
     rows = cursor.fetchall()
 
-    lines = []
-    work_colors = {}
+    grid = [["" for _ in range(48)] for _ in range(total_days)]
+
     for row in rows:
         work_title = row[0]
         if work_title not in work_colors:
             work_colors[work_title] = get_random_color()
+            lines.append(f'{work_colors[work_title]}{FULL_BLOCK}{RESET_COLOR}: {work_title}')
 
-    grid = [["" for _ in range(48)] for _ in range(7)]
-
-    for row in rows:
-        work_title = row[0]
         start_time = datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
         elapsed_time = row[2]
 
-        date_index = 6 - (start_time.date() - seven_days_ago).days
-        if date_index < 0 or date_index >= 7:
+        date_index = (end_date - start_time.date()).days
+        if date_index < 0 or date_index >= total_days:
             continue
 
         start_half_hour = (start_time.hour * 2) + (start_time.minute // 30)
@@ -209,30 +213,31 @@ def monitor():
 
         for i in range(blocks):
             if start_half_hour + i < 48:
-                grid[date_index][start_half_hour + i] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
+                grid[total_days - 1 - date_index][start_half_hour + i] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
 
-    lines.append("WORK TIME DISTRIBUTION")
+    if days_offset == 0:
+        lines.append('')
+        lines.append('          00    03    06    09    12    15    18    21    24')
 
-    for work_title, color in work_colors.items():
-        lines.append(f"{color}{FULL_BLOCK}{RESET_COLOR}: {work_title}")
-
-    #lines.append('\n   ' + ' '.join([f"{i//2:02d}:{(i%2)*30:02d}" for i in range(48)]))
-
-    for i in range(7):
-        date_str = (seven_days_ago + timedelta(days=6 - i)).strftime('%Y-%m-%d')
+    for i in range(total_days):
+        date_str = (start_date + timedelta(days=total_days - 1 - i)).strftime('%Y-%m-%d')
         row = f"{date_str} "
         for j in range(48):
-            block = grid[i][j] if grid[i][j] else EMPTY_BLOCK
+            block = grid[total_days - 1 - i][j] if grid[total_days - 1 - i][j] else EMPTY_BLOCK
             row += block
         lines.append(row)
 
+    lines.append('')
+    lines.append('Press enter to load more, or 0 to quit')
+
     print_screen(lines)
-    input()
     
     cursor.close()
     conn.close()
 
-    return
+    selected = input()
+
+    return selected
 
 def work_manager(message=None):
     lines = [
@@ -380,8 +385,14 @@ if __name__ == '__main__':
             else:
                 selected = home(message=result)
         elif selected == '2':
-            monitor()
-            break
+            total_days = 7
+            while True:
+                selected = monitor(total_days)
+                if selected == '0':
+                    selected = home()
+                    break
+                else:
+                    total_days += 7
         elif selected == '3':
             selected = work_manager()
             result = None
