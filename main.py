@@ -239,6 +239,34 @@ def monitor(total_days=7):
 
     return selected
 
+def log():
+    lines = [
+        'WORK LOG',
+        f'     {"Work Title":<40}{"Start Time":<22}{"End Time":<22}{"Elapsed Time (min)":<20}',
+        '',
+    ]
+
+    conn = sqlite3.connect('monitor.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT work_title, start_time, end_time, elapsed_time FROM work_log ORDER BY start_time DESC')
+    rows = cursor.fetchall()
+
+    idx = 0
+    for row in rows:
+        idx += 1
+        lines.append(f'{(str(idx)+'.'):<4} {row[0]:<40}{row[1]:<22}{row[2]:<22}{row[3]:<20.2f}')
+
+    lines.append('')
+    lines.append("Press enter to quit")
+    cursor.close()
+    conn.close()
+
+    print_screen(lines)
+    input()
+
+    return
+
 def work_manager(message=None):
     lines = [
         'WORK MANAGER',
@@ -326,6 +354,13 @@ def modify_work():
     if is_sure == 'Y':
         if not new_title == '':
             cursor.execute('UPDATE work SET title = ? WHERE id = ?', (new_title, selected_id))
+
+            conn_monitor = sqlite3.connect('monitor.db')
+            cursor_monitor = conn_monitor.cursor()
+            cursor_monitor.execute('UPDATE work_log SET work_title = ? WHERE work_title = ?', (new_title, selected_title))
+            conn_monitor.commit()
+            cursor_monitor.close()
+            conn_monitor.close()
         if not new_description == '':
             cursor.execute('UPDATE work SET description = ? WHERE id = ?', (new_description, selected_id))
         
@@ -421,5 +456,8 @@ if __name__ == '__main__':
             os.system('cls' if os.name == 'nt' else 'clear')
             print("Time manager quit successfully! Goodbye.")
             break
+        elif selected == 'log':
+            log()
+            selected = home()
         else:
             selected = home(message='Invalid input')
