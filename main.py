@@ -209,10 +209,12 @@ def monitor(total_days=7):
             continue
 
         start_half_hour = (start_time.hour * 2) + (start_time.minute // 30)
-        blocks = int(elapsed_time // 15)
+        total_blocks = int((elapsed_time + 29) // 30)
 
-        for i in range(blocks):
+        for i in range(total_blocks):
             if start_half_hour + i < 48:
+                if (i == total_blocks - 1) and (elapsed_time % 30) < 15:
+                    continue
                 grid[total_days - 1 - date_index][start_half_hour + i] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
 
     if days_offset == 0:
