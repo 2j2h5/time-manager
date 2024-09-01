@@ -209,7 +209,7 @@ def monitor(total_days=7):
             continue
 
         start_half_hour = (start_time.hour * 2) + (start_time.minute // 30)
-        total_blocks = int((elapsed_time + 29) // 30)
+        total_blocks = int(elapsed_time // 15)
 
         for i in range(total_blocks):
             if start_half_hour + i < 48:
