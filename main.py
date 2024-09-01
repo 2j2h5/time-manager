@@ -21,11 +21,22 @@ COLORS = [
     '\033[95m',
     '\033[96m',
     '\033[97m',
+    '\033[30m',
+    '\033[31m',
+    '\033[32m',
+    '\033[33m',
+    '\033[34m',
+    '\033[35m',
+    '\033[36m',
+    '\033[37m',
 ]
 RESET_COLOR = '\033[0m'
 
 def get_visible_length(text):
-    return len(text.replace('\033[91m', '').replace('\033[92m', '').replace('\033[93m', '').replace('\033[94m', '').replace('\033[95m', '').replace('\033[96m', '').replace('\033[97m', '').replace(RESET_COLOR, ''))
+    for color in COLORS:
+        text = text.replace(color, '')
+    text = text.replace(RESET_COLOR, '')
+    return len(text)
 
 def print_screen(lines):
     lengths = [get_visible_length(line) for line in lines]
@@ -194,11 +205,13 @@ def monitor(total_days=7):
     rows = cursor.fetchall()
 
     grid = [["" for _ in range(48)] for _ in range(total_days)]
+    idx = 0
 
     for row in rows:
-        work_title = row[0]
+        work_title = row[0]   
         if work_title not in work_colors:
-            work_colors[work_title] = get_random_color()
+            work_colors[work_title] = COLORS[idx]
+            idx += 1
             lines.append(f'{work_colors[work_title]}{FULL_BLOCK}{RESET_COLOR}: {work_title}')
 
         start_time = datetime.strptime(row[1], '%Y-%m-%d %H:%M:%S')
@@ -231,7 +244,7 @@ def monitor(total_days=7):
 
     lines.append('')
     lines.append('Enter. load more')
-    lines.append('1. all log')
+    lines.append('1. view all log')
     lines.append('0. quit')
 
     print_screen(lines)
