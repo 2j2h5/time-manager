@@ -230,7 +230,9 @@ def monitor(total_days=7):
         lines.append(row)
 
     lines.append('')
-    lines.append('Press enter to load more, or 0 to quit')
+    lines.append('Enter. load more')
+    lines.append('1. all log')
+    lines.append('0. quit')
 
     print_screen(lines)
     
@@ -428,6 +430,8 @@ if __name__ == '__main__':
                 if selected == '0':
                     selected = home()
                     break
+                elif selected == '1':
+                    log()
                 else:
                     total_days += 7
         elif selected == '3':
@@ -458,8 +462,5 @@ if __name__ == '__main__':
             os.system('cls' if os.name == 'nt' else 'clear')
             print("Time manager quit successfully! Goodbye.")
             break
-        elif selected == 'log':
-            log()
-            selected = home()
         else:
             selected = home(message='Invalid input')
