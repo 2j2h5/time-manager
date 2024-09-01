@@ -222,13 +222,16 @@ def monitor(total_days=7):
             continue
 
         start_half_hour = (start_time.hour * 2) + (start_time.minute // 30)
-        total_blocks = int(elapsed_time // 15)
+        total_blocks = int(elapsed_time // 30)
+        remaining_minutes = elapsed_time % 30
 
         for i in range(total_blocks):
             if start_half_hour + i < 48:
-                if (i == total_blocks - 1) and (elapsed_time % 30) < 15:
-                    continue
                 grid[total_days - 1 - date_index][start_half_hour + i] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
+
+        if remaining_minutes >= 15:
+            if start_half_hour + total_blocks < 48:
+                grid[total_days - 1 - date_index][start_half_hour + total_blocks] = work_colors[work_title] + FULL_BLOCK + RESET_COLOR
 
     if days_offset == 0:
         lines.append('')
